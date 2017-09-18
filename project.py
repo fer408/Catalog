@@ -12,7 +12,7 @@ import json
 from flask import make_response
 import requests
 
-app = Flask(__name__)
+app = Flask(__name__,static_url_path='/static/styles.css')
 
 CLIENT_ID = json.loads(
     open('client_secrets.json', 'r').read())['web']['client_id']
@@ -283,14 +283,14 @@ def menuItemJSON(item_id, menu_id):
 @app.route('/item/JSON')
 def itemsJSON():
     items = session.query(ItemType).all()
-    return jsonify(items=[r.serialize for r in itemss])
+    return jsonify(items=[r.serialize for r in items])
 
 
 # Show all items
 @app.route('/')
 @app.route('/item/')
 def showItems():
-    items = session.query(ItemType).order_by(asc(ItemType.name))
+    items = session.query(ItemType).order_by(asc(ItemType.id))
     if 'username' not in login_session:
         return render_template('publicitems.html', items=items)
     else:

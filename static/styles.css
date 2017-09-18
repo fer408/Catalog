@@ -22,7 +22,7 @@ h3 {
 	color: #4A4A4A;
 	line-height: 23px;
 }
- p {
+p {
  	
  	font-size: 16px;
  	color: #7B7573;
@@ -30,15 +30,15 @@ h3 {
  	font-weight: 400;
  }
 
- strong {
+strong {
  	font-size: 16px;
  	color: #7B7573;
  	line-height: 24px;
  }
 
- a {
+a {
  	font-size: 14px;
- 	color: #0093B9;
+ 	color: black;
  	line-height: 17px;
  }
 .padding-top {
@@ -65,11 +65,11 @@ h3 {
 }
 .btn.delete {
 	border-color: black;
-	color:red;
+	color:silver;
 }
 .btn.delete:hover {
 	border-color: black;
-	color: red;
+	color: silver;
 }
 .glyphicon {
 	margin-right: 10px;
@@ -86,17 +86,11 @@ h3 {
 	margin-bottom: 0;
 	line-height: 16px;
 	font-size: 16px;
-	color: red;
+	color: black;
 	font-weight: 400;
 }
 .divider {
 	height: 15px;
-}
-.divider.blue {
-	background-color: black;
-}
-.divider.green {
-	background-color: black;
 }
 
 .banner.menu {
@@ -110,11 +104,11 @@ h3 {
 .banner h1 {
 	margin: 45px 0;
 }
- .item-list {
+.item-list {
  	background-color: black;
  	padding: 20px;
-u }
- .item-list:hover {
+}
+.item-list:hover {
  	background-color: black;
  	padding: 20px;
 }
