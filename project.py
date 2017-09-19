@@ -12,7 +12,7 @@ import json
 from flask import make_response
 import requests
 
-app = Flask(__name__,static_url_path='/static/styles.css')
+app = Flask(__name__,static_url_path='')
 
 CLIENT_ID = json.loads(
     open('client_secrets.json', 'r').read())['web']['client_id']
