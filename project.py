@@ -11,6 +11,8 @@ import httplib2
 import json
 from flask import make_response
 import requests
+from functools import wraps
+
 
 app = Flask(__name__,static_url_path='')
 
@@ -26,6 +28,13 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args,**kwargs):
+        if 'username' not in login_session:
+            return redirect('/login')
+        return f(*args,**kwargs)
+    return decorated_function
 
 # Create anti-forgery state token
 @app.route('/login')
@@ -71,9 +80,11 @@ def fbconnect():
     url = 'https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email' % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
+    print result
     # print "url sent for API access:%s"% url
     # print "API JSON result: %s" % result
     data = json.loads(result)
+    print data
     login_session['provider'] = 'facebook'
     login_session['username'] = data["name"]
     login_session['email'] = data["email"]
@@ -126,16 +137,19 @@ def gconnect():
     if request.args.get('state') != login_session['state']:
         response = make_response(json.dumps('Invalid state parameter.'), 401)
         response.headers['Content-Type'] = 'application/json'
+        print "1"
         return response
     # Obtain authorization code
     code = request.data
-
+    print request
     try:
         # Upgrade the authorization code into a credentials object
         oauth_flow = flow_from_clientsecrets('client_secrets.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
-    except FlowExchangeError:
+    except  FlowExchangeError as e:
+        print e
+        print "2"
         response = make_response(
             json.dumps('Failed to upgrade the authorization code.'), 401)
         response.headers['Content-Type'] = 'application/json'
@@ -156,6 +170,7 @@ def gconnect():
     # Verify that the access token is used for the intended user.
     gplus_id = credentials.id_token['sub']
     if result['user_id'] != gplus_id:
+        print "3"
         response = make_response(
             json.dumps("Token's user ID doesn't match given user ID."), 401)
         response.headers['Content-Type'] = 'application/json'
@@ -163,6 +178,7 @@ def gconnect():
 
     # Verify that the access token is valid for this app.
     if result['issued_to'] != CLIENT_ID:
+        print "4"
         response = make_response(
             json.dumps("Token's client ID does not match app's."), 401)
         print "Token's client ID does not match app's."
@@ -206,7 +222,8 @@ def gconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ' " style = "width: 300px; height: 300px;border-radius: \
+    150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
     print "done!"
     return output
@@ -300,9 +317,9 @@ def showItems():
 
 
 @app.route('/item/new/', methods=['GET', 'POST'])
+@login_required
 def newItem():
-    if 'username' not in login_session:
-        return redirect('/login')
+    
     if request.method == 'POST':
         newItem = ItemType(
             name=request.form['name'], user_id=login_session['user_id'])
@@ -317,13 +334,14 @@ def newItem():
 
 
 @app.route('/item/<int:item_id>/edit/', methods=['GET', 'POST'])
+@login_required
 def editItem(item_id):
     editedItem = session.query(
         ItemType).filter_by(id=item_id).one()
-    if 'username' not in login_session:
-        return redirect('/login')
     if editedItem.user_id != login_session['user_id']:
-        return "<script>function myFunction() {alert('You are not authorized to edit this item. Please create your own item in order to edit.');}</script><body onload='myFunction()''>"
+        return "<script>function myFunction() {alert('You are not authorized\
+        to edit this item. Please create your own item\
+        in order to edit.');}</script><body onload='myFunction()''>"
     if request.method == 'POST':
         if request.form['name']:
             editedItem.name = request.form['name']
@@ -335,13 +353,14 @@ def editItem(item_id):
 
 # Delete a item
 @app.route('/item/<int:item_id>/delete/', methods=['GET', 'POST'])
+@login_required
 def deleteItem(item_id):
     itemToDelete = session.query(
         ItemType).filter_by(id=item_id).one()
-    if 'username' not in login_session:
-        return redirect('/login')
     if itemToDelete.user_id != login_session['user_id']:
-        return "<script>function myFunction() {alert('You are not authorized to delete this item. Please create your own item in order to delete.');}</script><body onload='myFunction()''>"
+        return "<script>function myFunction() {alert('You are not authorized\
+        to delete this item. Please create your own item in order to \
+        delete.');}</script><body onload='myFunction()''>"
     if request.method == 'POST':
         session.delete(itemToDelete)
         flash('%s Successfully Deleted' % itemToDelete.name)
@@ -373,7 +392,9 @@ def newMenuItem(item_id):
         return redirect('/login')
     item = session.query(ItemType).filter_by(id=item_id).one()
     if login_session['user_id'] != item.user_id:
-        return "<script>function myFunction() {alert('You are not authorized to add menu items to this item. Please create your own item in order to add items.');}</script><body onload='myFunction()''>"
+        return "<script>function myFunction() {alert('You are not authorized\
+        to add menu items to this item. Please create your own item in order\
+        to add items.');}</script><body onload='myFunction()''>"
         if request.method == 'POST':
             newItem = MenuItem(name=request.form['name'], description=request.form['description'], price=request.form[
                                'price'], item_id=item_id, user_id=item.user_id)
@@ -394,7 +415,9 @@ def editMenuItem(item_id, menu_id):
     editedItem = session.query(MenuItem).filter_by(id=menu_id).one()
     item = session.query(ItemType).filter_by(id=item_id).one()
     if login_session['user_id'] != item.user_id:
-        return "<script>function myFunction() {alert('You are not authorized to edit menu items to this item. Please create your own item in order to edit items.');}</script><body onload='myFunction()''>"
+        return "<script>function myFunction() {alert('You are not authorized\
+        to edit menu items to this item. Please create your own item in order\
+        to edit items.');}</script><body onload='myFunction()''>"
     if request.method == 'POST':
         if request.form['name']:
             editedItem.name = request.form['name']
@@ -413,13 +436,14 @@ def editMenuItem(item_id, menu_id):
 
 # Delete a menu item
 @app.route('/item/<int:item_id>/menu/<int:menu_id>/delete', methods=['GET', 'POST'])
-def deleteMenuItem(item_id, menu_id):
-    if 'username' not in login_session:
-        return redirect('/login')
+@login_required
+def deleteMenuItem(item_id, menu_id):    
     item = session.query(ItemType).filter_by(id=item_id).one()
     itemToDelete = session.query(MenuItem).filter_by(id=menu_id).one()
     if login_session['user_id'] != item.user_id:
-        return "<script>function myFunction() {alert('You are not authorized to delete menu items to this item. Please create your own item in order to delete items.');}</script><body onload='myFunction()''>"
+        return "<script>function myFunction() {alert('You are not authorized\
+         to delete menu items to this item. Please create your own item in \
+         order to delete items.');}</script><body onload='myFunction()''>"
     if request.method == 'POST':
         session.delete(itemToDelete)
         session.commit()
@@ -434,11 +458,11 @@ def deleteMenuItem(item_id, menu_id):
 def disconnect():
     if 'provider' in login_session:
         if login_session['provider'] == 'google':
-            gdisconnect()
+           
             del login_session['gplus_id']
-            del login_session['credentials']
+            del login_session['access_token']
         if login_session['provider'] == 'facebook':
-            fbdisconnect()
+            
             del login_session['facebook_id']
         del login_session['username']
         del login_session['email']
